@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Politique de confidentialité — CAP 2027</title>
+<meta name="description" content="Politique de confidentialité de l'application CAP 2027. Aucun compte, aucun tracking publicitaire, aucune donnée personnelle partagée.">
+<style>
+  :root{ --navy:#102a5c; --blue:#1a56db; --slate:#475569; --slate2:#64748b; --line:#e2e8f0; --bg:#f4f8fe; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+        color:var(--navy); background:linear-gradient(180deg,#f7fbff 0%,#e6effb 100%); line-height:1.65; }
+  .wrap{ max-width:780px; margin:0 auto; padding:40px 22px 80px; }
+  header{ display:flex; align-items:center; gap:14px; margin-bottom:8px; }
+  .badge{ display:inline-flex; gap:5px; }
+  .badge span{ width:26px;height:10px;border-radius:5px; }
+  h1{ font-size:30px; line-height:1.15; margin:18px 0 4px; }
+  .sub{ color:var(--slate); font-size:15px; margin:0 0 28px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:18px; padding:22px 24px; margin:16px 0;
+         box-shadow:0 6px 24px rgba(16,42,92,.05); }
+  h2{ font-size:19px; margin:0 0 10px; }
+  p,li{ color:#1e293b; font-size:15.5px; }
+  ul{ padding-left:20px; }
+  a{ color:var(--blue); }
+  .pill{ display:inline-block; background:#eef4ff; color:var(--navy); border:1px solid #d6e2ff;
+         border-radius:999px; padding:3px 12px; font-size:13px; font-weight:600; }
+  .muted{ color:var(--slate2); font-size:13.5px; }
+  footer{ text-align:center; color:var(--slate2); font-size:13px; margin-top:40px; }
+  strong{ color:var(--navy); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge"><span style="background:#1a56db"></span><span style="background:#fff;border:1px solid #cbd5e1"></span><span style="background:#d6373c"></span></div>
+    <strong style="letter-spacing:.5px;">CAP&nbsp;2027</strong>
+  </header>
+
+  <h1>Politique de confidentialité</h1>
+  <p class="sub">Application mobile <strong>CAP 2027</strong> · Dernière mise à jour : 8 juin 2026</p>
+
+  <div class="card">
+    <p style="margin-top:0"><span class="pill">En bref</span></p>
+    <p>CAP 2027 est une application civique et indépendante. <strong>Aucun compte, aucune publicité,
+    aucun traceur publicitaire, aucune revente de données.</strong> La quasi-totalité de vos
+    informations (candidats suivis, résultats de la boussole, réglages) reste <strong>sur votre
+    appareil</strong>. La seule donnée pouvant quitter votre téléphone est un identifiant technique
+    de notification, et uniquement si vous activez les notifications.</p>
+  </div>
+
+  <div class="card">
+    <h2>1. Éditeur</h2>
+    <p>L'application CAP 2027 est éditée à titre indépendant.<br>
+    Contact : <a href="mailto:introuvablesapps@gmail.com">introuvablesapps@gmail.com</a></p>
+  </div>
+
+  <div class="card">
+    <h2>2. Données que nous traitons</h2>
+    <p>CAP 2027 ne vous demande <strong>aucune inscription</strong> et ne collecte
+    <strong>aucune donnée personnelle identifiante</strong> (pas de nom, e-mail, numéro de
+    téléphone, localisation, contacts, données de santé ou financières).</p>
+    <p>Une seule donnée technique est traitée, <strong>si et seulement si vous activez les
+    notifications</strong> :</p>
+    <ul>
+      <li><strong>Jeton de notification push (token FCM)</strong> : un identifiant anonyme généré
+      par votre appareil, utilisé exclusivement pour vous envoyer les notifications que vous avez
+      choisies (actualités, mises à jour de candidats, rappels électoraux). Ce jeton n'est lié à
+      aucune identité et ne permet pas de vous identifier personnellement.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>3. Finalité</h2>
+    <p>Le jeton de notification sert uniquement à <strong>l'envoi des notifications</strong>.
+    Il n'est utilisé à aucune autre fin : pas de profilage, pas de publicité ciblée, pas de
+    mesure d'audience publicitaire.</p>
+  </div>
+
+  <div class="card">
+    <h2>4. Stockage local</h2>
+    <p>Vos préférences (candidats suivis, orientations suivies, catégories de notifications,
+    réglages, résultats de la boussole) sont stockées <strong>localement sur votre appareil</strong>
+    et ne sont pas transmises à des fins commerciales. Vous pouvez les effacer à tout moment via
+    « Effacer mes données locales » dans les réglages de l'application.</p>
+  </div>
+
+  <div class="card">
+    <h2>5. Sous-traitants techniques</h2>
+    <ul>
+      <li><strong>Google Firebase Cloud Messaging (FCM)</strong> — service d'acheminement des
+      notifications push. Le jeton de notification y transite pour permettre la livraison des
+      messages. Voir la
+      <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">politique de Firebase</a>.</li>
+      <li><strong>Supabase</strong> — hébergement de la base de contenus de l'application
+      (articles, candidats, programmes) et de la table des jetons de notification.</li>
+    </ul>
+    <p class="muted">Ces prestataires agissent uniquement comme intermédiaires techniques
+    nécessaires au fonctionnement de l'application. Aucune donnée n'est vendue ou partagée à des
+    fins publicitaires.</p>
+  </div>
+
+  <div class="card">
+    <h2>6. Connexion Internet</h2>
+    <p>Une connexion Internet est nécessaire uniquement pour récupérer les contenus les plus récents
+    (articles, candidats, programmes) et pour l'envoi des notifications. Les échanges sont
+    <strong>chiffrés (HTTPS / TLS)</strong>.</p>
+  </div>
+
+  <div class="card">
+    <h2>7. Conservation et suppression</h2>
+    <p>Le jeton de notification est <strong>supprimé automatiquement</strong> :</p>
+    <ul>
+      <li>lorsque vous <strong>désactivez les notifications</strong> dans l'application ;</li>
+      <li>lorsque vous <strong>désinstallez</strong> l'application ;</li>
+      <li>ou automatiquement par notre système lorsqu'il devient invalide.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>8. Enfants</h2>
+    <p>CAP 2027 s'adresse à un public adulte intéressé par l'actualité électorale. L'application
+    ne cible pas les enfants et ne collecte sciemment aucune donnée les concernant.</p>
+  </div>
+
+  <div class="card">
+    <h2>9. Vos droits</h2>
+    <p>Comme l'application ne collecte aucune donnée personnelle identifiante, aucune demande
+    d'accès ou de suppression de profil n'est nécessaire. Pour toute question relative à cette
+    politique, vous pouvez écrire à
+    <a href="mailto:introuvablesapps@gmail.com">introuvablesapps@gmail.com</a>.</p>
+  </div>
+
+  <div class="card">
+    <h2>10. Modifications</h2>
+    <p>Cette politique peut être mise à jour. La date de dernière mise à jour figure en haut de
+    cette page.</p>
+  </div>
+
+  <footer>
+    CAP 2027 — S'informer. Comparer. Choisir.<br>
+    Application indépendante · 100 % neutre · sans compte
+  </footer>
+</div>
+</body>
+</html>
