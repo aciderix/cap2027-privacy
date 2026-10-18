@@ -12,11 +12,6 @@ on:
   schedule:
     - cron: "17 5 * * *" # tous les jours, vers 7 h (heure de Paris)
   workflow_dispatch:
-  # TEMPORAIRE : test sur la branche de mise en place. À retirer avant le merge
-  # sur main.
-  push:
-    branches: [claude/friendly-ritchie-nhjj0m]
-    paths: [".github/workflows/demos-kratos-check.yml", "scripts/demos_kratos_check.py"]
 
 permissions:
   contents: read

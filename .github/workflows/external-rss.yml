@@ -21,11 +21,6 @@ on:
         description: "À blanc : lit les flux et vérifie le jeton, sans rien écrire"
         type: boolean
         default: false
-  # TEMPORAIRE : test à blanc sur la branche de mise en place. À retirer avant
-  # le merge sur main.
-  push:
-    branches: [claude/friendly-ritchie-nhjj0m]
-    paths: [".github/workflows/external-rss.yml", "scripts/ingest_external_rss.py"]
 
 permissions:
   contents: read
@@ -56,5 +51,5 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: sb_publishable_nycw__S1NdZYIVyu4LH4SQ_830IdXPA
           # Le jeton, lui, autorise les insertions dans news_articles : secret.
           INGEST_FROM_XML_TOKEN: ${{ secrets.INGEST_FROM_XML_TOKEN }}
-          DRY_RUN: ${{ (github.event_name == 'push' || inputs.dry_run) && '1' || '0' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
         run: python scripts/ingest_external_rss.py
