@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """
-Contrôle EN LECTURE SEULE de l'export Demos Kratos (FTPS).
+Contrôle (et import sur demande) de l'export Demos Kratos (FTPS).
 
 Liste le dossier, prend le dernier `demos-kratos-programmes-*.json` et le
 dernier `demos-kratos-match-*.json` (les `.part` sont des envois en cours,
 ignorés), les télécharge en mémoire et vérifie leur cohérence : format,
 version, compteurs `meta.counts`, identifiants uniques et références entre
-tableaux. N'écrit nulle part : ni base, ni fichier (hors résumé GitHub).
+tableaux. Compare ensuite leur `meta.contentHash` au dernier import en base
+(table publique dk_imports) : « à jour » ou « à importer ».
+
+Par défaut, rien n'est écrit. Avec DK_IMPORT=1, chaque export valide et
+différent du dernier import est envoyé à la fonction ingest-demos-kratos, qui
+l'importe en une transaction (RPC dk_import).
 
 Format décrit dans le README.md déposé par Demos Kratos à côté des exports.
 
-Env (secrets GitHub Actions) :
-    DK_FTP_HOST, DK_FTP_USER, DK_FTP_PASSWORD   obligatoires
+Env :
+    DK_FTP_HOST, DK_FTP_USER, DK_FTP_PASSWORD   secrets, obligatoires (sauf --local-dir)
     DK_FTP_DIR                                  optionnel (défaut : dossier de connexion)
+    SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY      publics ; sans eux, pas de comparaison
+    INGEST_FROM_XML_TOKEN                       secret, requis seulement avec DK_IMPORT=1
+    DK_IMPORT=1                                 importer (sinon : à blanc)
+    DK_IMPORT_URL                               optionnel (tests locaux)
 
 Test sans FTP :  python3 demos_kratos_check.py --local-dir <dossier des JSON>
 
@@ -31,6 +40,9 @@ import json
 import os
 import ssl
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections import Counter
 from typing import Any
 
@@ -163,8 +175,53 @@ def check(kind: str, doc: dict[str, Any]) -> list[str]:
     return errors
 
 
+def latest_import(kind: str) -> tuple[str, str | None]:
+    """État du dernier import de ce type en base : ("ok", hash), ("none", None)
+    si jamais importé, ("absent", None) si la table n'existe pas encore,
+    ("skip", None) sans configuration Supabase."""
+    url, key = os.environ.get("SUPABASE_URL", "").rstrip("/"), os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+    if not (url and key):
+        return "skip", None
+    q = urllib.parse.urlencode({"select": "content_hash", "kind": f"eq.{kind}",
+                                "order": "imported_at.desc,id.desc", "limit": "1"})
+    req = urllib.request.Request(f"{url}/rest/v1/dk_imports?{q}", headers={"apikey": key, "Authorization": f"Bearer {key}"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            rows = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return "absent", None
+        raise
+    return ("ok", rows[0]["content_hash"]) if rows else ("none", None)
+
+
+def push_import(name: str, raw: bytes) -> dict[str, Any]:
+    url = os.environ.get("DK_IMPORT_URL") or (os.environ.get("SUPABASE_URL", "").rstrip("/") + "/functions/v1/ingest-demos-kratos")
+    token = (os.environ.get("INGEST_FROM_XML_TOKEN") or "").strip()
+    if not token:
+        raise SystemExit("INGEST_FROM_XML_TOKEN manquant pour l'import.")
+
+    def post(file: str, body: bytes, timeout: int) -> dict[str, Any]:
+        req = urllib.request.Request(f"{url}?file={urllib.parse.quote(file)}", data=body, method="POST",
+                                     headers={"X-Ingest-Token": token, "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            return {"error": f"HTTP {e.code}: {e.read().decode('utf-8', errors='replace')[:300]}", "code": e.code}
+        except (urllib.error.URLError, OSError) as e:
+            return {"error": f"connexion interrompue : {e}"}
+
+    # Jeton vérifié d'abord avec un corps vide : la fonction répond 401 avant
+    # de lire le corps, et couperait sinon la connexion pendant l'envoi des 5 Mo.
+    probe = post("verification-jeton", b"", 30)
+    if probe.get("code") != 400:
+        return {"error": "jeton refusé (401)" if probe.get("code") == 401 else probe.get("error", "réponse inattendue")}
+    return post(name, raw, 180)
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Contrôle en lecture seule de l'export Demos Kratos")
+    ap = argparse.ArgumentParser(description="Contrôle (et import sur demande) de l'export Demos Kratos")
     ap.add_argument("--local-dir", help="lire les JSON dans ce dossier au lieu du FTP")
     args = ap.parse_args()
 
@@ -172,13 +229,16 @@ def main() -> int:
     partial = [n for n in names if n.endswith(".part")]
     print(f"Dossier : {len(names)} fichiers ({len(partial)} envoi(s) en cours ignoré(s))")
 
-    lines = ["| Export | Fichier | Taille | Généré le | contentHash | Contenu | État |", "|---|---|---|---|---|---|---|"]
+    do_import = os.environ.get("DK_IMPORT") == "1"
+    print("Mode : IMPORT" if do_import else "Mode : à blanc (aucune écriture)")
+    lines = ["| Export | Fichier | Taille | Généré le | contentHash | Contenu | État | Base CAP 2027 |",
+             "|---|---|---|---|---|---|---|---|"]
     status = 0
     for kind, (prefix, _) in KINDS.items():
         name = next((n for n in files if n.startswith(prefix)), None)
         if not name:
             print(f"\n[{kind}] aucun fichier {prefix}*.json")
-            lines.append(f"| {kind} | — | — | — | — | — | ❌ absent |")
+            lines.append(f"| {kind} | — | — | — | — | — | ❌ absent | — |")
             status = 1
             continue
         raw = files[name]
@@ -196,16 +256,35 @@ def main() -> int:
         for e in errors:
             print(f"  ERREUR       {e}")
         print(f"  => {'VALIDE' if not errors else 'INVALIDE'}")
+        db = "—"
         if errors:
             status = 1
+        else:
+            state, last_hash = latest_import(kind)
+            if state == "skip":
+                db = "non comparé"
+            elif state == "absent":
+                db = "tables Demos Kratos absentes"
+            elif last_hash == meta.get("contentHash"):
+                db = "✅ à jour"
+            else:
+                db = "à importer"
+                if do_import and state != "absent":
+                    res = push_import(name, raw)
+                    if res.get("error"):
+                        db, status = f"❌ import refusé : {res['error']}", 1
+                    else:
+                        db = "✅ importé" if not res.get("skipped") else "✅ à jour"
+                        print(f"  import       {json.dumps(res, ensure_ascii=False)}")
+            print(f"  base         {db}")
         lines.append(f"| {kind} | `{name}` | {len(raw) / 1024:,.0f} Ko | {meta.get('generatedAt')} | "
                      f"`{str(meta.get('contentHash'))[:12]}…` | {counts} | "
-                     f"{'✅ valide' if not errors else '❌ ' + '; '.join(errors)} |")
+                     f"{'✅ valide' if not errors else '❌ ' + '; '.join(errors)} | {db} |")
 
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path:
         with open(summary_path, "a", encoding="utf-8") as f:
-            f.write("## Export Demos Kratos (contrôle en lecture seule)\n\n" + "\n".join(lines) + "\n")
+            f.write(f"## Export Demos Kratos ({'import' if do_import else 'à blanc'})\n\n" + "\n".join(lines) + "\n")
     return status
 
 

@@ -1,9 +1,12 @@
-name: Demos Kratos — contrôle de l'export (lecture seule)
+name: Demos Kratos — contrôle et import de l'export
 
 # Se connecte en FTPS au dossier d'export de demos-kratos.fr, prend le dernier
-# fichier programmes et le dernier fichier match, et vérifie leur cohérence
-# (format, version, compteurs, références). N'écrit rien, ni en base ni
-# ailleurs : l'import viendra dans une étape suivante.
+# fichier programmes et le dernier fichier match, vérifie leur cohérence
+# (format, version, compteurs, références) et compare leur empreinte au
+# dernier import en base (« à jour » / « à importer »).
+#
+# Le passage quotidien est À BLANC : il n'écrit rien. L'import réel se lance
+# à la main (Run workflow → « import »), via la fonction ingest-demos-kratos.
 #
 # Dépôt public : le script n'affiche que noms de fichiers, dates, empreintes
 # et compteurs. Les identifiants FTP restent dans les secrets.
@@ -12,6 +15,11 @@ on:
   schedule:
     - cron: "17 5 * * *" # tous les jours, vers 7 h (heure de Paris)
   workflow_dispatch:
+    inputs:
+      import:
+        description: "Importer en base les exports valides et nouveaux"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,9 +42,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Check export (read-only)
+      - name: Check (and import on demand)
         env:
           DK_FTP_HOST: ${{ secrets.DK_FTP_HOST }}
           DK_FTP_USER: ${{ secrets.DK_FTP_USER }}
           DK_FTP_PASSWORD: ${{ secrets.DK_FTP_PASSWORD }}
+          # Publics : lecture de dk_imports pour la comparaison.
+          SUPABASE_URL: https://oyvqvfawcxlnvpgloicx.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_nycw__S1NdZYIVyu4LH4SQ_830IdXPA
+          # Même jeton que l'ingestion RSS ; utilisé seulement en mode import.
+          INGEST_FROM_XML_TOKEN: ${{ secrets.INGEST_FROM_XML_TOKEN }}
+          DK_IMPORT: ${{ inputs.import && '1' || '0' }}
         run: python scripts/demos_kratos_check.py
