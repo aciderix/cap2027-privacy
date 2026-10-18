@@ -5,8 +5,10 @@ name: Demos Kratos — contrôle et import de l'export
 # (format, version, compteurs, références) et compare leur empreinte au
 # dernier import en base (« à jour » / « à importer »).
 #
-# Le passage quotidien est À BLANC : il n'écrit rien. L'import réel se lance
-# à la main (Run workflow → « import »), via la fonction ingest-demos-kratos.
+# Chaque export valide et différent du dernier import est importé via la
+# fonction ingest-demos-kratos (RPC dk_import : contrôle du format, puis
+# remplacement complet en une transaction ; un export refusé ne change rien et
+# fait échouer le run). « Run workflow » avec « à blanc » : contrôle seul.
 #
 # Dépôt public : le script n'affiche que noms de fichiers, dates, empreintes
 # et compteurs. Les identifiants FTP restent dans les secrets.
@@ -16,8 +18,8 @@ on:
     - cron: "17 5 * * *" # tous les jours, vers 7 h (heure de Paris)
   workflow_dispatch:
     inputs:
-      import:
-        description: "Importer en base les exports valides et nouveaux"
+      dry_run:
+        description: "À blanc : contrôler sans importer"
         type: boolean
         default: false
 
@@ -42,7 +44,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Check (and import on demand)
+      - name: Check and import
         env:
           DK_FTP_HOST: ${{ secrets.DK_FTP_HOST }}
           DK_FTP_USER: ${{ secrets.DK_FTP_USER }}
@@ -50,7 +52,8 @@ jobs:
           # Publics : lecture de dk_imports pour la comparaison.
           SUPABASE_URL: https://oyvqvfawcxlnvpgloicx.supabase.co
           SUPABASE_PUBLISHABLE_KEY: sb_publishable_nycw__S1NdZYIVyu4LH4SQ_830IdXPA
-          # Même jeton que l'ingestion RSS ; utilisé seulement en mode import.
+          # Même jeton que l'ingestion RSS.
           INGEST_FROM_XML_TOKEN: ${{ secrets.INGEST_FROM_XML_TOKEN }}
-          DK_IMPORT: ${{ inputs.import && '1' || '0' }}
+          # Passage planifié : inputs.dry_run est vide, donc import.
+          DK_IMPORT: ${{ inputs.dry_run && '0' || '1' }}
         run: python scripts/demos_kratos_check.py
