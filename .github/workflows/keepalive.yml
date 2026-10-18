@@ -1,0 +1,30 @@
+name: Keepalive (tâches planifiées)
+
+# GitHub désactive les workflows planifiés d'un dépôt public après 60 jours
+# sans activité. Ce job les réactive via l'API, ce qui remet le compteur à
+# zéro sans créer de commit (même principe que liskin/gh-workflow-keepalive).
+# Il se réactive lui-même au passage.
+
+on:
+  schedule:
+    - cron: "41 6 1,15 * *" # le 1er et le 15 de chaque mois
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  keepalive:
+    name: Re-enable scheduled workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Re-enable workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          for wf in external-rss.yml demos-kratos-check.yml keepalive.yml; do
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/${wf}/enable"
+            echo "enabled: ${wf}"
+          done

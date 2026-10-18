@@ -1,0 +1,60 @@
+name: Ingest external RSS sources
+
+# Sources RSS que Supabase ne peut pas lire lui-même (IP bloquée : X via
+# nitter, Le Figaro…). Elles sont récupérées depuis les runners GitHub puis
+# envoyées à la fonction ingest-from-xml de CAP 2027, qui parse, dédoublonne,
+# tague et insère. Les sources sont celles de news_sources avec
+# fetch_via_github = true : elles se règlent dans l'admin, sans toucher ce
+# fichier.
+#
+# Dépôt public : runners gratuits, mais logs publics. Le script n'affiche que
+# des slugs, des URLs RSS et des compteurs ; le jeton reste dans les secrets.
+
+on:
+  schedule:
+    # Toutes les 30 min, décalé de 4 min pour précéder le cron
+    # notify-after-ingest de xx:16.
+    - cron: "4,34 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "À blanc : lit les flux et vérifie le jeton, sans rien écrire"
+        type: boolean
+        default: false
+  # TEMPORAIRE : test à blanc sur la branche de mise en place. À retirer avant
+  # le merge sur main.
+  push:
+    branches: [claude/friendly-ritchie-nhjj0m]
+    paths: [".github/workflows/external-rss.yml", "scripts/ingest_external_rss.py"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: external-rss
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    name: Fetch + ingest external sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run ingest
+        env:
+          # URL et clé publishable Supabase : publiques par nature (déjà dans
+          # l'app), on peut les écrire ici.
+          SUPABASE_URL: https://oyvqvfawcxlnvpgloicx.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_nycw__S1NdZYIVyu4LH4SQ_830IdXPA
+          # Le jeton, lui, autorise les insertions dans news_articles : secret.
+          INGEST_FROM_XML_TOKEN: ${{ secrets.INGEST_FROM_XML_TOKEN }}
+          DRY_RUN: ${{ (github.event_name == 'push' || inputs.dry_run) && '1' || '0' }}
+        run: python scripts/ingest_external_rss.py

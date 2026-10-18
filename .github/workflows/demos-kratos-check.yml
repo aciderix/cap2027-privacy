@@ -1,0 +1,47 @@
+name: Demos Kratos — contrôle de l'export (lecture seule)
+
+# Se connecte en FTPS au dossier d'export de demos-kratos.fr, prend le dernier
+# fichier programmes et le dernier fichier match, et vérifie leur cohérence
+# (format, version, compteurs, références). N'écrit rien, ni en base ni
+# ailleurs : l'import viendra dans une étape suivante.
+#
+# Dépôt public : le script n'affiche que noms de fichiers, dates, empreintes
+# et compteurs. Les identifiants FTP restent dans les secrets.
+
+on:
+  schedule:
+    - cron: "17 5 * * *" # tous les jours, vers 7 h (heure de Paris)
+  workflow_dispatch:
+  # TEMPORAIRE : test sur la branche de mise en place. À retirer avant le merge
+  # sur main.
+  push:
+    branches: [claude/friendly-ritchie-nhjj0m]
+    paths: [".github/workflows/demos-kratos-check.yml", "scripts/demos_kratos_check.py"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demos-kratos
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check latest export
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check export (read-only)
+        env:
+          DK_FTP_HOST: ${{ secrets.DK_FTP_HOST }}
+          DK_FTP_USER: ${{ secrets.DK_FTP_USER }}
+          DK_FTP_PASSWORD: ${{ secrets.DK_FTP_PASSWORD }}
+        run: python scripts/demos_kratos_check.py
