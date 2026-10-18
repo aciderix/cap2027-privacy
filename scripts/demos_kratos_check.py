@@ -61,13 +61,21 @@ def latest(names: list[str], prefix: str) -> str | None:
 
 
 def fetch_ftp(directory: str | None) -> tuple[list[str], dict[str, bytes]]:
-    host, user, password = (os.environ.get(k) for k in ("DK_FTP_HOST", "DK_FTP_USER", "DK_FTP_PASSWORD"))
+    # strip() : un espace ou un retour à la ligne collé avec le secret suffit à
+    # faire refuser la connexion.
+    host, user, password = ((os.environ.get(k) or "").strip() for k in ("DK_FTP_HOST", "DK_FTP_USER", "DK_FTP_PASSWORD"))
     if not (host and user and password):
         print("Secrets DK_FTP_HOST / DK_FTP_USER / DK_FTP_PASSWORD manquants.")
         raise SystemExit(2)
     ftp = ReusedSessionFTP_TLS(context=ssl.create_default_context(), timeout=60)
     ftp.connect(host, 21)
-    ftp.login(user, password)
+    try:
+        ftp.login(user, password)
+    except ftplib.error_perm as e:
+        # TLS déjà établi à ce stade : seul le couple identifiant / mot de passe est en cause.
+        print(f"Connexion FTPS établie, mais identifiants refusés par le serveur : {e}")
+        print("Vérifier DK_FTP_USER et DK_FTP_PASSWORD (valeur exacte, sans espace ni guillemets).")
+        raise SystemExit(2)
     ftp.prot_p()
     if directory:
         ftp.cwd(directory)
