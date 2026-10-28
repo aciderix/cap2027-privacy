@@ -44,6 +44,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter
+from pathlib import Path
 from typing import Any
 
 KINDS = {
@@ -72,6 +73,23 @@ def latest(names: list[str], prefix: str) -> str | None:
     return candidates[-1] if candidates else None
 
 
+
+def ftp_tls_context() -> ssl.SSLContext:
+    """Complète la chaîne FTPS sans remplacer les autorités système.
+
+    Le serveur omet actuellement la chaîne Let's Encrypt YR1 / Root YR.
+    On conserve CERT_REQUIRED et la vérification du nom du serveur ;
+    aucune confiance partielle ni désactivation de TLS n'est autorisée.
+    Le certificat public est versionné pour éviter un téléchargement au run.
+    """
+    context = ssl.create_default_context()
+    intermediate = Path(__file__).resolve().parent / "certs" / "lets-encrypt-yr1-chain.pem"
+    context.load_verify_locations(cafile=str(intermediate))
+    # Ne pas accepter l'intermédiaire comme ancre à lui seul : il doit
+    # toujours être relié à une racine de confiance du système.
+    context.verify_flags &= ~ssl.VERIFY_X509_PARTIAL_CHAIN
+    return context
+
 def fetch_ftp(directory: str | None) -> tuple[list[str], dict[str, bytes]]:
     # strip() : un espace ou un retour à la ligne collé avec le secret suffit à
     # faire refuser la connexion.
@@ -79,7 +97,7 @@ def fetch_ftp(directory: str | None) -> tuple[list[str], dict[str, bytes]]:
     if not (host and user and password):
         print("Secrets DK_FTP_HOST / DK_FTP_USER / DK_FTP_PASSWORD manquants.")
         raise SystemExit(2)
-    ftp = ReusedSessionFTP_TLS(context=ssl.create_default_context(), timeout=60)
+    ftp = ReusedSessionFTP_TLS(context=ftp_tls_context(), timeout=60)
     ftp.connect(host, 21)
     try:
         ftp.login(user, password)
